@@ -1,0 +1,18 @@
+# This file is itself a chezmoi template: the OS conditionals are evaluated
+# per-machine, so each platform only ever applies the files meant for it.
+
+# --- Repo-only files (never applied to any target) ---
+README.md
+vscode
+terminal-customization-summary.md
+
+# --- Windows-only tree: ignore everywhere EXCEPT Windows ---
+{{ if ne .chezmoi.os "windows" }}
+Documents
+{{ end }}
+
+# --- Linux-only files: ignore everywhere EXCEPT Linux ---
+{{ if ne .chezmoi.os "linux" }}
+.config
+.tmux.conf
+{{ end }}

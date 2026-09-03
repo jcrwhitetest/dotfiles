@@ -1,0 +1,6 @@
+# chezmoi keeps no build artifacts here; ignore common local cruft only.
+*.bak
+*.tmp
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,24 @@
+{
+  // Curated subset of VS Code settings that define the One Dark Pro look & feel.
+  // This is a REFERENCE copy captured in the dotfiles repo; it is NOT auto-applied
+  // by chezmoi (see .chezmoiignore) so it will never clobber a machine's full
+  // settings.json. Merge the keys you want by hand, or use it to bootstrap a new box.
+  //
+  // Requires these extensions:
+  //   zhuangtongfa.material-theme   (One Dark Pro, by binaryify)
+  //   pkief.material-icon-theme     (Material Icon Theme)
+  //   ms-vscode.powershell          (PowerShell)
+  "workbench.colorTheme": "One Dark Pro",
+  "workbench.iconTheme": "material-icon-theme",
+
+  "editor.fontFamily": "CaskaydiaCove Nerd Font Mono",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 18,
+  "editor.mouseWheelZoom": true,
+
+  "terminal.integrated.fontFamily": "CaskaydiaCove Nerd Font Mono",
+  "terminal.integrated.gpuAcceleration": "on",
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+  "markdown-preview-enhanced.previewTheme": "one-dark.css"
+}
