@@ -8,6 +8,13 @@
 
 OMP_CONFIG="$HOME/.config/oh-my-posh/OneDarkPro.omp.json"
 
+# --- Ensure user-local bins (oh-my-posh, chezmoi, atuin, ...) are on PATH ---
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
+export PATH
+
 # --- Oh My Posh prompt ---
 if command -v oh-my-posh >/dev/null 2>&1; then
   if [ -n "$ZSH_VERSION" ]; then

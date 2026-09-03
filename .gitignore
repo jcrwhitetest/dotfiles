@@ -1,5 +1,48 @@
-# chezmoi keeps no build artifacts here; ignore common local cruft only.
+# ------------------------------------------------------------------
+# SAFETY: this repo is PUBLIC. Never commit secrets, keys, or anything
+# that reveals internal network layout (IP addresses, host inventories).
+# These patterns block the usual offenders from being added by mistake.
+# NOTE: .gitignore only stops NEW files — it does not scrub already-tracked
+# content. Keep IPs/hostnames out of files that ARE tracked (e.g. use
+# templated placeholders, not literal 192.168.x.x).
+# ------------------------------------------------------------------
+
+# --- SSH: keys, configs, known hosts (internal IPs live here) ---
+**/.ssh/
+dot_ssh/
+private_dot_ssh/
+**/ssh/config
+**/authorized_keys
+**/known_hosts*
+**/id_rsa*
+**/id_ecdsa*
+**/id_ed25519*
+**/id_dsa*
+*.pem
+*.ppk
+*.pub
+
+# --- atuin: sync key, session token, and local history DB are SECRET ---
+**/atuin/key
+**/atuin/session
+**/atuin/*.db
+**/atuin/history.db*
+
+# --- Generic secrets ---
+.env
+.env.*
+*.key
+*.secret
+*.crt
+*.pfx
+*.kdbx
+**/credentials
+**/*token*
+**/*secret*
+
+# --- Local cruft ---
 *.bak
+*.bak.*
 *.tmp
 *~
 .DS_Store

@@ -79,10 +79,10 @@ if (Get-Command fd -ErrorAction SilentlyContinue) {
     $env:FZF_CTRL_T_COMMAND  = $env:FZF_DEFAULT_COMMAND
 }
 
-# --- PSFzf: Ctrl+t = fuzzy file picker, Ctrl+r = fuzzy history search ---
+# --- PSFzf: Ctrl+t = fuzzy file picker (Ctrl+r reverse-history is owned by atuin below) ---
 if ((Get-Command fzf -ErrorAction SilentlyContinue) -and (Get-Module -ListAvailable -Name PSFzf)) {
     Import-Module PSFzf
-    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t'
 }
 
 # --- eza: modern `ls`, exposed under NEW names so native ls/dir/gci stay intact ---
@@ -104,5 +104,12 @@ if (Get-Command procs -ErrorAction SilentlyContinue) {
 }
 
 # ripgrep (rg), fd, and dust are used directly by name; no wrappers needed.
+
+# --- atuin: better shell history (owns Ctrl+r); up-arrow stays with PSReadLine ---
+if (Get-Command atuin -ErrorAction SilentlyContinue) {
+    # 2-line Oh My Posh prompt -> offset the post-search redraw by one line
+    $env:ATUIN_POWERSHELL_PROMPT_OFFSET = -1
+    atuin init powershell --disable-up-arrow | Out-String | Invoke-Expression
+}
 
 Write-Host "Profile loaded ✔" -ForegroundColor DarkMagenta
