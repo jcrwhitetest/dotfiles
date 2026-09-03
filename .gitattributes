@@ -1,0 +1,10 @@
+# Normalize line endings so the repo works on Windows and Linux together.
+* text=auto
+
+# Windows-only file: keep CRLF
+*.ps1 text eol=crlf
+
+# Linux-bound files: force LF regardless of the checkout platform
+*.sh          text eol=lf
+*.conf        text eol=lf
+dot_tmux.conf text eol=lf
