@@ -38,10 +38,18 @@ export FZF_DEFAULT_OPTS="--height=40% --layout=reverse --border --info=inline \
 --color=bg+:#3e4451,bg:#282c34,spinner:#56b6c2,hl:#e06c75 \
 --color=fg:#abb2bf,header:#e06c75,info:#c678dd,pointer:#56b6c2 \
 --color=marker:#98c379,fg+:#dcdfe4,prompt:#c678dd,hl+:#e06c75"
-if command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1; then
-  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+# fd is packaged as `fdfind` on Debian/Ubuntu; detect whichever exists
+if command -v fd >/dev/null 2>&1; then
+  _FD_BIN=fd
+elif command -v fdfind >/dev/null 2>&1; then
+  _FD_BIN=fdfind
+  alias fd='fdfind'   # expose the familiar `fd` name
+fi
+if [ -n "$_FD_BIN" ]; then
+  export FZF_DEFAULT_COMMAND="$_FD_BIN --type f --hidden --follow --exclude .git"
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 fi
+unset _FD_BIN
 
 # --- modern CLI tools (Linux parity; exposed under NEW names, natives untouched) ---
 if command -v bat >/dev/null 2>&1; then
