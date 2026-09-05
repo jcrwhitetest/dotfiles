@@ -39,6 +39,12 @@ for arg in "$@"; do
 done
 TOOLS=${REQUESTED:-$TOOLS_ALL}
 
+# non-interactive shells often lack ~/.local/bin — add it for our own probes
+case ":$PATH:" in
+  *":$BIN_DIR:"*) ;;
+  *) PATH="$BIN_DIR:$PATH"; export PATH ;;
+esac
+
 command -v curl >/dev/null 2>&1 || die 'curl is required'
 command -v tar  >/dev/null 2>&1 || die 'tar is required'
 
@@ -68,7 +74,7 @@ asset_spec() {
 
 install_tool() {
   tool=$1
-  if [ "$FORCE" -eq 0 ] && command -v "$tool" >/dev/null 2>&1; then
+  if [ "$FORCE" -eq 0 ] && { [ -x "$BIN_DIR/$tool" ] || command -v "$tool" >/dev/null 2>&1; }; then
     info "$tool: already installed ($(command -v "$tool")) — skipping"
     return 0
   fi
@@ -103,7 +109,8 @@ install_tool() {
 
   mkdir -p "$BIN_DIR"
   install -m 0755 "$found" "$BIN_DIR/$tool"
-  info "$tool: installed $("$BIN_DIR/$tool" --version 2>/dev/null | head -1) -> $BIN_DIR/$tool"
+  version=$("$BIN_DIR/$tool" --version 2>/dev/null | grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+  info "$tool: installed ${version:-?} -> $BIN_DIR/$tool"
 }
 
 # atuin's bash integration needs bash-preexec; init.sh sources it from here
