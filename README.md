@@ -68,11 +68,47 @@ New VM, once:
    [ -f "$HOME/.config/oh-my-posh/init.sh" ] && . "$HOME/.config/oh-my-posh/init.sh"
    ```
 4. `dotfiles-install-tools` for eza / dust / procs / atuin.
-5. `tmux.conf` applies to `~/.tmux.conf`. If a VM already has one, review the diff
+5. Join the machine to atuin sync (see below) if you want shared history.
+6. `tmux.conf` applies to `~/.tmux.conf`. If a VM already has one, review the diff
    first — the prefix is remapped to **Ctrl-a**.
 
 Afterwards the loop is: edit the repo on Windows → `git push` → `chezmoi update`
 on each VM (pulls and applies in one step).
+
+## Shell history sync (atuin)
+
+History syncs through the hosted server at `api.atuin.sh` under the account
+`tweak`. Defaults are all correct, so nothing about sync is configured in this
+repo — `auto_sync` is on with a 5-minute interval out of the box.
+
+The thing to understand: atuin encrypts history **client-side**, so the server
+only ever holds ciphertext. The encryption key is generated locally and is
+*not* tied to the account — an account password alone decrypts nothing. Every
+machine must end up with the **same key file**, or it will sync happily and be
+unable to read a thing.
+
+Adding a machine:
+
+```sh
+# 1. from a machine that is already synced, copy the key across directly
+scp ~/.local/share/atuin/key <newbox>:.local/share/atuin/key
+ssh <newbox> chmod 600 .local/share/atuin/key
+
+# 2. on the new machine — leave the key prompt BLANK to use the file above
+ssh -t <newbox> "~/.local/bin/atuin login -u tweak"
+atuin sync
+```
+
+If the machine has run atuin before, wipe `~/.local/share/atuin/{key,session,*.db*}`
+*before* logging in. It will have generated its own unrelated key, and atuin
+cannot re-encrypt existing records under a replacement key — you get a
+half-readable store that is far more annoying than the lost local history.
+
+Never open the key file in an editor while a Claude Code session is attached to
+the IDE: the integration forwards your current editor selection as context, and
+the key will end up in the transcript. Read it with `atuin key` in a terminal.
+Losing the key means the synced history is permanently unreadable — there is no
+reset, since the server has never seen it.
 
 ## Notes / decisions
 - Native `ls`, `cat`, `dir`, `gci`, `Get-Content`, `ps` are left untouched. The
