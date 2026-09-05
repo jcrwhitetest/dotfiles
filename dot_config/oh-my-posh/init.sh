@@ -70,3 +70,34 @@ fi
 if command -v procs >/dev/null 2>&1; then
   alias procz='procs'
 fi
+
+# dust (du replacement) and rg / fd are used under their own names — no aliases needed.
+
+# --- fzf key bindings: Ctrl+t file picker, Alt+c cd (parity with PSFzf on Windows) ---
+# Loaded BEFORE atuin on purpose: fzf claims Ctrl+r here, atuin takes it back below.
+if command -v fzf >/dev/null 2>&1; then
+  if [ -n "$ZSH_VERSION" ]; then
+    if fzf --zsh >/dev/null 2>&1; then          # fzf >= 0.48 ships its own init
+      eval "$(fzf --zsh)"
+    elif [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]; then
+      . /usr/share/doc/fzf/examples/key-bindings.zsh   # Debian/Ubuntu package layout
+    fi
+  elif [ -n "$BASH_VERSION" ]; then
+    if fzf --bash >/dev/null 2>&1; then
+      eval "$(fzf --bash)"
+    elif [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
+      . /usr/share/doc/fzf/examples/key-bindings.bash
+    fi
+  fi
+fi
+
+# --- atuin: better shell history (owns Ctrl+r); up-arrow stays with the shell ---
+if command -v atuin >/dev/null 2>&1; then
+  if [ -n "$ZSH_VERSION" ]; then
+    eval "$(atuin init zsh --disable-up-arrow)"
+  elif [ -n "$BASH_VERSION" ]; then
+    # atuin's bash integration needs bash-preexec (dotfiles-install-tools fetches it)
+    [ -f "$HOME/.local/share/bash-preexec.sh" ] && . "$HOME/.local/share/bash-preexec.sh"
+    eval "$(atuin init bash --disable-up-arrow)"
+  fi
+fi

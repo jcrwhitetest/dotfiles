@@ -8,3 +8,6 @@
 *.sh          text eol=lf
 *.conf        text eol=lf
 dot_tmux.conf text eol=lf
+
+# Linux helper scripts have no extension — pin them to LF too
+dot_local/bin/executable_* text eol=lf

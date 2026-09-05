@@ -14,5 +14,6 @@ Documents
 # --- Linux-only files: ignore everywhere EXCEPT Linux ---
 {{ if ne .chezmoi.os "linux" }}
 .config
+.local
 .tmux.conf
 {{ end }}

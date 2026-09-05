@@ -1,0 +1,140 @@
+#!/usr/bin/env sh
+# ================================
+# dotfiles-install-tools  —  no-sudo installer for the Rust CLI tools
+# ================================
+# Fetches static release binaries from GitHub into ~/.local/bin, so boxes where
+# we have no (passwordless) sudo still get the same tooling as the Windows side.
+# Everything here is user-local: nothing is written outside $HOME.
+#
+#   dotfiles-install-tools              # install whatever is missing
+#   dotfiles-install-tools --force      # reinstall, even if already present
+#   dotfiles-install-tools eza atuin    # only these
+#
+# Tools installed by the distro's package manager (ripgrep, fd, bat, zoxide,
+# fzf, tmux) are NOT handled here — install those with apt where sudo exists.
+
+set -eu
+
+TOOLS_ALL='eza dust procs atuin'
+BIN_DIR="$HOME/.local/bin"
+SHARE_DIR="$HOME/.local/share"
+MIN_FREE_KB=102400   # 100 MB headroom before we start unpacking archives
+
+FORCE=0
+REQUESTED=''
+
+die()  { printf 'dotfiles-install-tools: %s\n' "$*" >&2; exit 1; }
+info() { printf '  %s\n' "$*"; }
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE=1 ;;
+    -h|--help)  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*)         die "unknown option: $arg" ;;
+    *)          case " $TOOLS_ALL " in
+                  *" $arg "*) REQUESTED="$REQUESTED $arg" ;;
+                  *) die "unknown tool: $arg (known: $TOOLS_ALL)" ;;
+                esac ;;
+  esac
+done
+TOOLS=${REQUESTED:-$TOOLS_ALL}
+
+command -v curl >/dev/null 2>&1 || die 'curl is required'
+command -v tar  >/dev/null 2>&1 || die 'tar is required'
+
+case "$(uname -s)" in
+  Linux) ;;
+  *) die "only Linux is supported here (this is $(uname -s))" ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64)  ARCH=x86_64 ;;
+  aarch64|arm64) ARCH=aarch64 ;;
+  *) die "unsupported architecture: $(uname -m)" ;;
+esac
+
+free_kb=$(df -Pk "$HOME" | awk 'NR==2 {print $4}')
+[ "$free_kb" -ge "$MIN_FREE_KB" ] || \
+  die "only $((free_kb / 1024)) MB free on $HOME — free up space first"
+
+# repo + a regex matching the release asset we want, per tool
+asset_spec() {
+  case "$1" in
+    eza)   printf '%s|%s' 'eza-community/eza' "/eza_${ARCH}-unknown-linux-gnu\.tar\.gz\$" ;;
+    dust)  printf '%s|%s' 'bootandy/dust'     "/dust-v[^/]*-${ARCH}-unknown-linux-gnu\.tar\.gz\$" ;;
+    procs) printf '%s|%s' 'dalance/procs'     "/procs-v[^/]*-${ARCH}-linux\.zip\$" ;;
+    atuin) printf '%s|%s' 'atuinsh/atuin'     "/atuin-${ARCH}-unknown-linux-gnu\.tar\.gz\$" ;;
+  esac
+}
+
+install_tool() {
+  tool=$1
+  if [ "$FORCE" -eq 0 ] && command -v "$tool" >/dev/null 2>&1; then
+    info "$tool: already installed ($(command -v "$tool")) — skipping"
+    return 0
+  fi
+
+  spec=$(asset_spec "$tool")
+  repo=${spec%%|*}
+  pattern=${spec#*|}
+
+  url=$(curl -fsSL -m 30 "https://api.github.com/repos/$repo/releases/latest" \
+        | grep -o '"browser_download_url": *"[^"]*"' \
+        | sed 's/.*: *"//; s/"$//' \
+        | grep -E "$pattern" \
+        | head -1) || url=''
+  [ -n "$url" ] || { info "$tool: no matching $ARCH asset in $repo's latest release"; return 1; }
+
+  tmp="$TMPROOT/$tool"
+  mkdir -p "$tmp"
+
+  archive="$tmp/${url##*/}"
+  curl -fsSL -m 180 -o "$archive" "$url" || { info "$tool: download failed"; return 1; }
+
+  case "$archive" in
+    *.tar.gz) tar -xzf "$archive" -C "$tmp" ;;
+    *.zip)    command -v unzip >/dev/null 2>&1 || { info "$tool: needs unzip"; return 1; }
+              unzip -qo "$archive" -d "$tmp" ;;
+    *)        info "$tool: unhandled archive type"; return 1 ;;
+  esac
+
+  # archive layouts differ per project (flat vs. versioned subdir) — just find it
+  found=$(find "$tmp" -type f -name "$tool" -perm -u+x | head -1)
+  [ -n "$found" ] || { info "$tool: binary not found inside $(basename "$archive")"; return 1; }
+
+  mkdir -p "$BIN_DIR"
+  install -m 0755 "$found" "$BIN_DIR/$tool"
+  info "$tool: installed $("$BIN_DIR/$tool" --version 2>/dev/null | head -1) -> $BIN_DIR/$tool"
+}
+
+# atuin's bash integration needs bash-preexec; init.sh sources it from here
+install_bash_preexec() {
+  target="$SHARE_DIR/bash-preexec.sh"
+  if [ "$FORCE" -eq 0 ] && [ -f "$target" ]; then
+    info "bash-preexec: already present — skipping"
+    return 0
+  fi
+  mkdir -p "$SHARE_DIR"
+  curl -fsSL -m 60 -o "$target" \
+    'https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh' \
+    || { info 'bash-preexec: download failed (atuin will work in zsh only)'; return 1; }
+  info "bash-preexec: installed -> $target"
+}
+
+TMPROOT=$(mktemp -d)
+# shellcheck disable=SC2064  # expand TMPROOT now, not when the trap fires
+trap "rm -rf '$TMPROOT'" EXIT INT TERM
+
+printf 'Installing user-local tools (%s) into %s\n' "$ARCH" "$BIN_DIR"
+failed=''
+for t in $TOOLS; do
+  install_tool "$t" || failed="$failed $t"
+done
+case " $TOOLS " in
+  *' atuin '*) install_bash_preexec || failed="$failed bash-preexec" ;;
+esac
+
+if [ -n "$failed" ]; then
+  printf '\nFailed:%s\n' "$failed" >&2
+  exit 1
+fi
+printf '\nDone. Open a new shell (or re-source ~/.bashrc) to pick the tools up.\n'
